@@ -1,2 +1,3 @@
 .,English,Spanish,French,German,Italian,Portuguese,Polish,Japanese,Chinese
-Example.name,"A Name","something",,
+Example.name,Example Scenario,,,,,,,,,
+TheFallofHouseLynch.name,The Fall of House Lynch,,,,,,,,,
