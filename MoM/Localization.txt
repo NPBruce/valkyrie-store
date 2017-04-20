@@ -1,0 +1,2 @@
+.,English,Spanish,French,German,Italian,Portuguese,Polish,Japanese,Chinese
+Example.name,"A Name","something",,
