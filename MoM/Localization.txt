@@ -1,3 +1,4 @@
 .,English,Spanish,French,German,Italian,Portuguese,Polish,Japanese,Chinese
 Example.name,Example Scenario,,,,,,,,,
+ExoticMaterial.name,Exotic Material (Testing),,,,,,,,,
 TheFallofHouseLynch.name,The Fall of House Lynch,,,,,,,,,
