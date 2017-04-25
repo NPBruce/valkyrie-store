@@ -2,4 +2,3 @@
 01_FirstBlood.name,The Shadow Rune - Introduction - First Blood,,,,,,,,,
 02_AFatGoblin.name,The Shadow Rune - Act I - A Fat Goblin,,,,,,,,,
 affairsofwizards.name,Affairs of Wizards,,,,,,,,,
-example.name,Example Quest,,,,,,,,,
