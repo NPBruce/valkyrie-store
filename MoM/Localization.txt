@@ -2,3 +2,4 @@
 Demo.name,Valkyrie Feature Demo,,,,,,,,,
 ExoticMaterial.name,Exotic Material,Material Exótico,,Exotisches Material,,,,,,
 TheFallofHouseLynch.name,The Fall of House Lynch,La Caída de la Casa Lynch,,Der Fall des Hauses Lynch,,,,,,
+TheTruth.name,The Truth,,,,,,,,,
