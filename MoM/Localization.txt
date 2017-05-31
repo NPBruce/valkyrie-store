@@ -1,4 +1,5 @@
 .,English,Spanish,French,German,Italian,Portuguese,Polish,Japanese,Chinese
-Demo.name,Valkyrie Feature Demo,,,,,,,,,
+Demo.name,Valkyrie Examples and Demos,,,,,,,,,
 ExoticMaterial.name,Exotic Material,Material Exótico,,Exotisches Material,,,,,,
 TheFallofHouseLynch.name,The Fall of House Lynch,La Caída de la Casa Lynch,,Der Fall des Hauses Lynch,,,,,,
+TheTruth.name,The Truth,,,,,,,,,
