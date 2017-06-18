@@ -3,3 +3,4 @@
 02_AFatGoblin.name,The Shadow Rune - Act I - A Fat Goblin,,,,,,,,,
 affairsofwizards.name,Affairs of Wizards,,,,,,,,,
 campaign.name,Valkyrie 1.1 Feature Demo,,,,,,,,,
+CastleDaerion.name,Castle Daerion,,,,,,,,,
