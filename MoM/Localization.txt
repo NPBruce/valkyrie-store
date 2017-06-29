@@ -5,3 +5,4 @@ TheFallofHouseLynch.name,The Fall of House Lynch,La Caída de la Casa Lynch,,Der
 TheTruth.name,The Truth,,,Die Wahrheit,,,,,,
 Demo.name,Valkyrie Examples and Demos,,,,,,,,,
 TheRobberyOfTheKadakianIdol.name,The Robbery of the Kadakian Idol,,,Der Raub des Kadakian Idols,,O Roubo do Idolo Kadakian,,,,
+InPlacesUnseen.name,In Places Unseen,,,,,,,,,
