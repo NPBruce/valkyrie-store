@@ -86,7 +86,7 @@ def get_latest_commit_date(url, retries=3, delay=2):
         if "raw.githubusercontent.com" in parsed.netloc and len(parts) >= 4:
             user, repo, branch = parts[:3]
             repo_api = f"https://api.github.com/repos/{user}/{repo}/commits?sha={branch}&path={'/'.join(parts[3:])}"
-        elif "github.com" in parsed.netloc and len(parts) >= 2:
+        elif "raw.githubusercontent.com" in parsed.netloc and len(parts) >= 2:
             user, repo = parts[:2]
             repo_api = f"https://api.github.com/repos/{user}/{repo}/commits"
         else:
