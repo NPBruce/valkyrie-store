@@ -78,6 +78,12 @@ jobs:
           pip install requests configparser
           python .github/scripts/manifest_sync.py "$GameType"
 
+      - name: Show git status before commit
+        run: |
+          git status
+          git diff D2E/manifestDownload.ini || true
+          git diff MoM/manifestDownload.ini || true
+
       - name: Commit and push manifestDownload.ini for D2E
         if: env.GameType == 'D2E'
         uses: stefanzweifel/git-auto-commit-action@v5
