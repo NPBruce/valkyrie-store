@@ -75,7 +75,7 @@ def fetch_scenario_ini(url, retries=3, delay=2):
 def get_latest_commit_date(url, retries=3, delay=2):
     logging.info(f"Fetching latest commit date for: {url}")
     parsed = urlparse(url)
-    if " raw.githubusercontent.com" in parsed.netloc:
+    if "raw.githubusercontent.com" in parsed.netloc:
         parts = parsed.path.strip('/').split('/')
         if "raw.githubusercontent.com" in parsed.netloc and len(parts) >= 4:
             user, repo, branch = parts[:3]
