@@ -189,9 +189,12 @@ def main():
     scenarios = []
 
     for section in config.sections():
-        scenario = process_scenario_section(section, config)
-        if scenario:
-            scenarios.append(scenario)
+        try:
+            scenario = process_scenario_section(section, config)
+            if scenario:
+                scenarios.append(scenario)
+        except Exception as e:
+            logging.error(f"Exception while processing section [{section}]: {e}", exc_info=True)
 
     write_manifest_download_ini(scenarios, output_path)
     logging.info("manifest_sync.py script finished successfully.")
