@@ -183,6 +183,7 @@ def main():
     game_type = sys.argv[1]
     manifest_path = "manifest.ini"
     output_path = get_manifest_path(game_type)
+    logging.info("Manifest path to update: " + output_path)
 
     config = parse_manifest_ini(manifest_path)
     scenarios = []
