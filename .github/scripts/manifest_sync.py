@@ -102,40 +102,72 @@ def get_latest_commit_date(url, retries=3, delay=2):
     parsed = urlparse(url)
     if "raw.githubusercontent.com" in parsed.netloc:
         parts = parsed.path.strip('/').split('/')
-        if "raw.githubusercontent.com" in parsed.netloc and len(parts) >= 4:
+        if len(parts) >= 3:
             user, repo, branch = parts[:3]
-            repo_api = f"https://api.github.com/repos/{user}/{repo}/commits?sha={branch}&path={'/'.join(parts[3:])}"
-        elif "raw.githubusercontent.com" in parsed.netloc and len(parts) >= 2:
-            user, repo = parts[:2]
-            repo_api = f"https://api.github.com/repos/{user}/{repo}/commits"
+            repo_path = '/'.join(parts[3:]) if len(parts) > 3 else ''
+            # List files in the repo path to find the .valkyrie file
+            if repo_path:
+                api_url = f"https://api.github.com/repos/{user}/{repo}/contents/{repo_path}?ref={branch}"
+            else:
+                api_url = f"https://api.github.com/repos/{user}/{repo}/contents?ref={branch}"
+            headers = {}
+            token = os.environ.get("GITHUB_TOKEN")
+            if token:
+                headers["Authorization"] = f"token {token}"
+            valkyrie_file_path = None
+            for attempt in range(1, retries + 1):
+                try:
+                    resp = requests.get(api_url, headers=headers, timeout=20)
+                    if resp.status_code == 200:
+                        files = resp.json()
+                        if not isinstance(files, list):
+                            logging.warning(f"API response is not a list at {api_url}: {files}")
+                            return "1970-01-01T12:28:29Z"
+                        for file in files:
+                            if file["name"].lower().endswith(".valkyrie"):
+                                valkyrie_file_path = file["path"]
+                                break
+                        if valkyrie_file_path:
+                            break
+                        else:
+                            logging.warning(f"No .valkyrie file found in repo listing at {api_url}")
+                            return "1970-01-01T12:28:29Z"
+                    else:
+                        logging.warning(f"Failed to list files from {api_url} (status {resp.status_code}), attempt {attempt}/{retries}")
+                except Exception as e:
+                    logging.error(f"Exception while listing files from {api_url} (attempt {attempt}/{retries}): {e}")
+                if attempt < retries:
+                    time.sleep(delay)
+            if not valkyrie_file_path:
+                logging.warning(f"No .valkyrie file found after all attempts in {api_url}")
+                return "1970-01-01T12:28:29Z"
+            # Now get the latest commit for the .valkyrie file
+            repo_api = f"https://api.github.com/repos/{user}/{repo}/commits?sha={branch}&path={valkyrie_file_path}"
+            for attempt in range(1, retries + 1):
+                try:
+                    resp = requests.get(repo_api, headers=headers, timeout=20)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if isinstance(data, list) and data:
+                            date = data[0]["commit"]["committer"]["date"]
+                            logging.info(f"Latest commit date for {valkyrie_file_path} in {url}: {date}")
+                            return date
+                        else:
+                            logging.warning(f"No commits found for {valkyrie_file_path} in {url}, attempt {attempt}/{retries}")
+                    else:
+                        logging.warning(f"Failed to fetch commits from {repo_api} (status {resp.status_code}), attempt {attempt}/{retries}")
+                except Exception as e:
+                    logging.error(f"Exception while fetching commits from {repo_api} (attempt {attempt}/{retries}): {e}")
+                if attempt < retries:
+                    time.sleep(delay)
+            logging.error(f"All attempts failed to fetch commit date for {valkyrie_file_path} in {repo_api}")
+            return "1970-01-01T12:28:29Z"
         else:
             logging.warning(f"Could not parse repo info from url: {url}")
-            return ""
-        headers = {}
-        token = os.environ.get("GITHUB_TOKEN")
-        if token:
-            headers["Authorization"] = f"token {token}"
-        for attempt in range(1, retries + 1):
-            try:
-                resp = requests.get(repo_api, headers=headers, timeout=20)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if isinstance(data, list) and data:
-                        date = data[0]["commit"]["committer"]["date"]
-                        logging.info(f"Latest commit date for {url}: {date}")
-                        return date
-                    else:
-                        logging.warning(f"No commits found for {url}, attempt {attempt}/{retries}")
-                else:
-                    logging.warning(f"Failed to fetch commits from {repo_api} (status {resp.status_code}), attempt {attempt}/{retries}")
-            except Exception as e:
-                logging.error(f"Exception while fetching commits from {repo_api} (attempt {attempt}/{retries}): {e}")
-            if attempt < retries:
-                time.sleep(delay)
+            return "1970-01-01T12:28:29Z"
     else:
         logging.info(f"Non-GitHub URL, returning date placeholder instead of getting commit date fetch: {url}")
         return "1970-01-01T12:28:29Z"
-    return ""
 
 def parse_manifest_ini(manifest_path):
     logging.info(f"Parsing manifest.ini from: {manifest_path}")
