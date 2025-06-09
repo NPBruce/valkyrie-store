@@ -148,10 +148,28 @@ def process_scenario_section(section, config):
         logging.warning(f"Could not fetch scenario.ini for [{section}], skipping.")
         return None
 
-    # Parse scenario.ini
-    scenario_config = configparser.ConfigParser()
+    # Parse scenario.ini with interpolation disabled to handle '%' characters
+    scenario_config = configparser.ConfigParser(interpolation=None)
     scenario_config.optionxform = str
-    scenario_config.read_string(scenario_ini_content)
+
+    # Try parsing, and if a BOM is present or a section header error occurs, try to recover
+    try:
+        scenario_config.read_string(scenario_ini_content)
+    except configparser.MissingSectionHeaderError as e:
+        logging.warning(f"Missing section header or BOM in scenario.ini for [{section}]: {e}. Trying to recover by stripping BOM and retrying.")
+        # Remove BOM if present and try again
+        cleaned_content = scenario_ini_content.lstrip('\ufeff')
+        try:
+            scenario_config.read_string(cleaned_content)
+        except Exception as e2:
+            logging.error(f"Failed to parse scenario.ini for [{section}] after BOM removal: {e2}")
+            return None
+    except configparser.InterpolationSyntaxError as e:
+        logging.error(f"Interpolation error while parsing scenario.ini for [{section}]: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"General error while parsing scenario.ini for [{section}]: {e}")
+        return None
 
     # Rename [Quest] to [ScenarioName]
     scenario_data = {}
