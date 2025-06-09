@@ -137,6 +137,13 @@ def write_manifest_download_ini(scenarios, out_path):
                 f.write(f"{k}={v}\n")
             f.write("\n")
     logging.info(f"Finished writing manifestDownload.ini with {len(scenarios)} scenarios.")
+    # Log the full content of the generated file
+    try:
+        with open(out_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            logging.info(f"Content of {out_path}:\n{content}")
+    except Exception as e:
+        logging.error(f"Could not read {out_path} for logging: {e}")
 
 def process_scenario_section(section, config):
     if "external" not in config[section]:
