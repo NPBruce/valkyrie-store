@@ -11,10 +11,6 @@ on:
         options:
           - D2E
           - MoM
-  push:
-    paths:
-      - 'D2E/manifest.ini'
-      - 'MoM/manifest.ini'
 
 jobs:
   sync-manifest:
@@ -24,16 +20,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set GameType from file change
-        if: github.event_name == 'push'
-        id: gametype
-        run: |
-          if [[ "${{ github.event.head_commit.modified }}" =~ "D2E/manifest.ini" ]]; then
-            echo "GameType=D2E" >> $GITHUB_ENV
-          elif [[ "${{ github.event.head_commit.modified }}" =~ "MoM/manifest.ini" ]]; then
-            echo "GameType=MoM" >> $GITHUB_ENV
-          fi
 
       - name: Set GameType from workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
