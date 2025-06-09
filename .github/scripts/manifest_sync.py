@@ -3,7 +3,7 @@ import os
 import configparser
 import requests
 from urllib.parse import urlparse
-from datetime import datetime
+from datetime import datetime, UTC
 import logging
 import time
 
@@ -126,11 +126,10 @@ def parse_manifest_ini(manifest_path):
     return config
 
 def write_manifest_download_ini(scenarios, out_path):
-    from datetime import datetime
     logging.info(f"Writing manifestDownload.ini to: {out_path}")
     with open(out_path, "w", encoding="utf-8") as f:
         # Write header line with timestamp and scenario count
-        now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S'UTC'")
+        now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S'UTC'")
         f.write(f"# Generated the {now} with {len(scenarios)} scenarios\n")
         for scenario in scenarios:
             f.write(f'[{scenario["name"]}]\n')
