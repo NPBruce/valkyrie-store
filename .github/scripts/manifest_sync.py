@@ -30,12 +30,16 @@ def fetch_scenario_ini(url, retries=3, delay=2):
 
     parsed = urlparse(url)
     if "raw.githubusercontent.com" in parsed.netloc:
-        # Convert raw.githubusercontent.com/USER/REPO/BRANCH/PATH to API URL
+        # Convert raw.githubusercontent.com/USER/REPO/BRANCH/PATH (PATH optional) to API URL
         parts = parsed.path.strip('/').split('/')
-        if len(parts) >= 4:
+        if len(parts) >= 3:
             user, repo, branch = parts[:3]
-            repo_path = '/'.join(parts[3:])
-            api_url = f"https://api.github.com/repos/{user}/{repo}/contents/{repo_path}?ref={branch}"
+            # If there is a path, use it; otherwise, just list the root
+            repo_path = '/'.join(parts[3:]) if len(parts) > 3 else ''
+            if repo_path:
+                api_url = f"https://api.github.com/repos/{user}/{repo}/contents/{repo_path}?ref={branch}"
+            else:
+                api_url = f"https://api.github.com/repos/{user}/{repo}/contents?ref={branch}"
             headers = {}
             token = os.environ.get("GITHUB_TOKEN")
             if token:
