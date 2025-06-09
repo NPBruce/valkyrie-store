@@ -75,7 +75,7 @@ def fetch_scenario_ini(url, retries=3, delay=2):
 def get_latest_commit_date(url, retries=3, delay=2):
     logging.info(f"Fetching latest commit date for: {url}")
     parsed = urlparse(url)
-    if "github.com" in parsed.netloc:
+    if " raw.githubusercontent.com" in parsed.netloc:
         parts = parsed.path.strip('/').split('/')
         if "raw.githubusercontent.com" in parsed.netloc and len(parts) >= 4:
             user, repo, branch = parts[:3]
@@ -159,7 +159,6 @@ def process_scenario_section(section, config):
     scenario_data["latest_update"] = get_latest_commit_date(external_url)
 
     logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
-    logging.info(f"Final scenario_data for [{section}]: {scenario_data}")
 
     return {
         "name": section,
