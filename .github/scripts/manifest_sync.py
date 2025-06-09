@@ -19,10 +19,11 @@ def get_manifest_path(game_type):
     else:
         return "MoM/manifestDownload.ini"
 
-def fetch_scenario_ini(url, retries=3, delay=2):
+def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
     """
     Fetch the first .ini file found in the given external repository URL.
     Tries to list files in the repo and fetch the first .ini file found.
+    If not a GitHub raw URL, tries to fetch {url}/{scenario_name}.ini directly.
     """
     if url.endswith('/'):
         url = url[:-1]
@@ -59,6 +60,7 @@ def fetch_scenario_ini(url, retries=3, delay=2):
                             ini_resp = requests.get(ini_file, timeout=20)
                             if ini_resp.status_code == 200:
                                 logging.info(f"Successfully fetched ini file from: {ini_file}")
+                                print(f"\033[32mSuccessfully fetched ini file from: {ini_file}\033[0m")
                                 return ini_resp.text
                             else:
                                 logging.warning(f"Failed to fetch ini file from: {ini_file} (status {ini_resp.status_code}), attempt {attempt}/{retries}")
@@ -76,7 +78,25 @@ def fetch_scenario_ini(url, retries=3, delay=2):
         else:
             logging.warning(f"URL path does not have enough parts to extract user/repo/branch: {url} (parts: {parts})")
     else:
-        logging.warning(f"URL does not contain raw.githubusercontent.com: {url}")
+        # Try fetching {url}/{scenario_name}.ini directly for non-GitHub URLs
+        if scenario_name:
+            ini_url = f"{url}/{scenario_name}.ini"
+            for attempt in range(1, retries + 1):
+                try:
+                    resp = requests.get(ini_url, timeout=20)
+                    if resp.status_code == 200:
+                        logging.info(f"Successfully fetched ini file from: {ini_url}")
+                        print(f"\033[32mSuccessfully fetched ini file from: {ini_url}\033[0m")
+                        return resp.text
+                    else:
+                        logging.warning(f"Failed to fetch ini file from: {ini_url} (status {resp.status_code}), attempt {attempt}/{retries}")
+                except Exception as e:
+                    logging.error(f"Exception while fetching ini file from {ini_url} (attempt {attempt}/{retries}): {e}")
+                if attempt < retries:
+                    time.sleep(delay)
+            logging.error(f"All attempts failed to fetch .ini file from {ini_url}")
+        else:
+            logging.warning(f"No scenario_name provided for non-GitHub URL: {url}")
     return None
 
 def get_latest_commit_date(url, retries=3, delay=2):
@@ -115,7 +135,8 @@ def get_latest_commit_date(url, retries=3, delay=2):
             if attempt < retries:
                 time.sleep(delay)
     else:
-        logging.info(f"Non-GitHub URL, skipping commit date fetch: {url}")
+        logging.info(f"Non-GitHub URL, returning date placeholder instead of getting commit date fetch: {url}")
+        return "1970-01-01T12:28:29Z"
     return ""
 
 def parse_manifest_ini(manifest_path):
@@ -143,7 +164,7 @@ def process_scenario_section(section, config):
         logging.warning(f"Section [{section}] missing 'external' entry, skipping.")
         return None
     external_url = config[section]["external"]
-    scenario_ini_content = fetch_scenario_ini(external_url)
+    scenario_ini_content = fetch_scenario_ini(external_url, scenario_name=section)
     if not scenario_ini_content:
         logging.warning(f"Could not fetch scenario.ini for [{section}], skipping.")
         return None
