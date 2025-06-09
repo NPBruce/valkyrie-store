@@ -40,7 +40,7 @@ jobs:
         run: echo "GameType=MoM" >> $GITHUB_ENV
 
       - name: Check for recent commit (skip if <2min)
-#        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule'
         id: recent_commit_check
         run: |
           latest_commit_time=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
