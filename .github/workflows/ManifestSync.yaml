@@ -58,10 +58,18 @@ jobs:
           pip install requests configparser
           python .github/scripts/manifest_sync.py "$GameType"
 
-      - name: Commit and push manifestDownload.ini
+      - name: Commit and push manifestDownload.ini for D2E
+        if: env.GameType == 'D2E'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
           file_pattern: |
             D2E/manifestDownload.ini
+
+      - name: Commit and push manifestDownload.ini for MoM
+        if: env.GameType == 'MoM'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
+          file_pattern: |
             MoM/manifestDownload.ini
