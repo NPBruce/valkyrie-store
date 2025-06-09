@@ -28,8 +28,6 @@ def fetch_scenario_ini(url, retries=3, delay=2):
     if url.endswith('/'):
         url = url[:-1]
 
-    # Try to detect GitHub raw URLs and convert to API URL for listing files
-    ini_content = None
     parsed = urlparse(url)
     if "raw.githubusercontent.com" in parsed.netloc:
         # Convert raw.githubusercontent.com/USER/REPO/BRANCH/PATH to API URL
@@ -43,18 +41,26 @@ def fetch_scenario_ini(url, retries=3, delay=2):
             if token:
                 headers["Authorization"] = f"token {token}"
             for attempt in range(1, retries + 1):
+                logging.info(f"Attempt {attempt}/{retries} to list files at {api_url}")
                 try:
                     resp = requests.get(api_url, headers=headers, timeout=20)
+                    logging.info(f"HTTP GET {api_url} returned status {resp.status_code}")
                     if resp.status_code == 200:
                         files = resp.json()
+                        if not isinstance(files, list):
+                            logging.warning(f"API response is not a list at {api_url}: {files}")
+                            return None
                         ini_file = None
                         for file in files:
+                            logging.debug(f"Found file in repo: {file.get('name', '')}")
                             if file["name"].lower().endswith(".ini"):
                                 ini_file = file["download_url"]
+                                logging.info(f"First .ini file found: {ini_file}")
                                 break
                         if ini_file:
-                            logging.info(f"Found ini file: {ini_file}")
+                            logging.info(f"Fetching ini file from: {ini_file}")
                             ini_resp = requests.get(ini_file, timeout=20)
+                            logging.info(f"HTTP GET {ini_file} returned status {ini_resp.status_code}")
                             if ini_resp.status_code == 200:
                                 logging.info(f"Successfully fetched ini file from: {ini_file}")
                                 return ini_resp.text
@@ -69,7 +75,12 @@ def fetch_scenario_ini(url, retries=3, delay=2):
                     logging.error(f"Exception while listing/fetching ini file from {api_url} (attempt {attempt}/{retries}): {e}")
                 if attempt < retries:
                     time.sleep(delay)
+            logging.error(f"All attempts failed to fetch .ini file from repo at {api_url}")
             return None
+        else:
+            logging.warning(f"URL path does not have enough parts to extract user/repo/branch: {url}")
+    else:
+        logging.warning(f"URL does not contain raw.githubusercontent.com: {url}")
     return None
 
 def get_latest_commit_date(url, retries=3, delay=2):
