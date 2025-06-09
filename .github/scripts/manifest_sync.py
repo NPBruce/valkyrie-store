@@ -179,9 +179,8 @@ def parse_manifest_ini(manifest_path):
 def write_manifest_download_ini(scenarios, out_path):
     logging.info(f"Writing manifestDownload.ini to: {out_path}")
     with open(out_path, "w", encoding="utf-8") as f:
-        # Write header line with timestamp and scenario count
-        now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S'UTC'")
-        f.write(f"# Generated the {now} with {len(scenarios)} scenarios\n")
+        # Write header line with scenario count
+        f.write(f"# Generated with {len(scenarios)} scenarios\n")
         for scenario in scenarios:
             f.write(f'[{scenario["name"]}]\n')
             for k, v in scenario["data"].items():
