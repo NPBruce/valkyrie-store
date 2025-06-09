@@ -50,7 +50,7 @@ jobs:
           now_epoch=$(date +%s)
           diff=$((now_epoch - latest_commit_epoch))
           echo "Latest commit was $diff seconds ago"
-          if [ $diff -lt 300 ]; then
+          if [ $diff -lt 120 ]; then
             echo "Repository was updated less than 2 minutes ago. Skipping job."
             exit 78
           fi
