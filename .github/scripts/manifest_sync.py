@@ -30,6 +30,7 @@ def fetch_scenario_ini(url, retries=3, delay=2):
     parsed = urlparse(url)
     if "raw.githubusercontent.com" in parsed.netloc:
         parts = parsed.path.strip('/').split('/')
+        logging.debug(f"Parsed URL parts: {parts}")
         if len(parts) >= 3:
             user, repo, branch = parts[:3]
             repo_path = '/'.join(parts[3:]) if len(parts) > 3 else ''
@@ -73,7 +74,7 @@ def fetch_scenario_ini(url, retries=3, delay=2):
             logging.error(f"All attempts failed to fetch .ini file from repo at {api_url}")
             return None
         else:
-            logging.warning(f"URL path does not have enough parts to extract user/repo/branch: {url}")
+            logging.warning(f"URL path does not have enough parts to extract user/repo/branch: {url} (parts: {parts})")
     else:
         logging.warning(f"URL does not contain raw.githubusercontent.com: {url}")
     return None
