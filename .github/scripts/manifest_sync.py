@@ -60,7 +60,6 @@ def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
                             ini_resp = requests.get(ini_file, timeout=20)
                             if ini_resp.status_code == 200:
                                 logging.info(f"Successfully fetched ini file from: {ini_file}")
-                                print(f"\033[32mSuccessfully fetched ini file from: {ini_file}\033[0m")
                                 return ini_resp.text
                             else:
                                 logging.warning(f"Failed to fetch ini file from: {ini_file} (status {ini_resp.status_code}), attempt {attempt}/{retries}")
@@ -86,7 +85,6 @@ def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
                     resp = requests.get(ini_url, timeout=20)
                     if resp.status_code == 200:
                         logging.info(f"Successfully fetched ini file from: {ini_url}")
-                        print(f"\033[32mSuccessfully fetched ini file from: {ini_url}\033[0m")
                         return resp.text
                     else:
                         logging.warning(f"Failed to fetch ini file from: {ini_url} (status {resp.status_code}), attempt {attempt}/{retries}")
