@@ -57,7 +57,9 @@ jobs:
 
       - name: Skip if recent commit
         if: steps.recent_commit_check.outcome == 'failure'
-        run: echo "Job skipped due to recent commit." && exit 0
+        run: |
+          echo "::warning::Job skipped due to recent commit."
+          exit 0
 
       - name: Fetch manifest.ini
         id: fetch_manifest
