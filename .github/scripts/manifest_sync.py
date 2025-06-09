@@ -24,17 +24,14 @@ def fetch_scenario_ini(url, retries=3, delay=2):
     Fetch the first .ini file found in the given external repository URL.
     Tries to list files in the repo and fetch the first .ini file found.
     """
-    logging.info(f"Fetching scenario .ini from: {url}")
     if url.endswith('/'):
         url = url[:-1]
 
     parsed = urlparse(url)
     if "raw.githubusercontent.com" in parsed.netloc:
-        # Convert raw.githubusercontent.com/USER/REPO/BRANCH/PATH (PATH optional) to API URL
         parts = parsed.path.strip('/').split('/')
         if len(parts) >= 3:
             user, repo, branch = parts[:3]
-            # If there is a path, use it; otherwise, just list the root
             repo_path = '/'.join(parts[3:]) if len(parts) > 3 else ''
             if repo_path:
                 api_url = f"https://api.github.com/repos/{user}/{repo}/contents/{repo_path}?ref={branch}"
@@ -45,10 +42,8 @@ def fetch_scenario_ini(url, retries=3, delay=2):
             if token:
                 headers["Authorization"] = f"token {token}"
             for attempt in range(1, retries + 1):
-                logging.info(f"Attempt {attempt}/{retries} to list files at {api_url}")
                 try:
                     resp = requests.get(api_url, headers=headers, timeout=20)
-                    logging.info(f"HTTP GET {api_url} returned status {resp.status_code}")
                     if resp.status_code == 200:
                         files = resp.json()
                         if not isinstance(files, list):
@@ -56,15 +51,11 @@ def fetch_scenario_ini(url, retries=3, delay=2):
                             return None
                         ini_file = None
                         for file in files:
-                            logging.debug(f"Found file in repo: {file.get('name', '')}")
                             if file["name"].lower().endswith(".ini"):
                                 ini_file = file["download_url"]
-                                logging.info(f"First .ini file found: {ini_file}")
                                 break
                         if ini_file:
-                            logging.info(f"Fetching ini file from: {ini_file}")
                             ini_resp = requests.get(ini_file, timeout=20)
-                            logging.info(f"HTTP GET {ini_file} returned status {ini_resp.status_code}")
                             if ini_resp.status_code == 200:
                                 logging.info(f"Successfully fetched ini file from: {ini_file}")
                                 return ini_resp.text
@@ -134,8 +125,12 @@ def parse_manifest_ini(manifest_path):
     return config
 
 def write_manifest_download_ini(scenarios, out_path):
+    from datetime import datetime
     logging.info(f"Writing manifestDownload.ini to: {out_path}")
     with open(out_path, "w", encoding="utf-8") as f:
+        # Write header line with timestamp and scenario count
+        now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S'UTC'")
+        f.write(f"# Generated the {now} with {len(scenarios)} scenarios\n\n")
         for scenario in scenarios:
             f.write(f'[{scenario["name"]}]\n')
             for k, v in scenario["data"].items():
