@@ -11,10 +11,15 @@ on:
         options:
           - D2E
           - MoM
+  schedule:
+    # Run D2E at every hour
+    - cron: '0 * * * *'
+    # Run MoM at every hour + 30 minutes
+    - cron: '30 * * * *'
 
 jobs:
   sync-manifest:
-    name: Sync Manifest (${{ github.event.inputs.GameType}})
+    name: Sync Manifest (${{ github.event.inputs.GameType || (github.event.schedule == '0 * * * *' && 'D2E') || (github.event.schedule == '30 * * * *' && 'MoM') }})
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -25,6 +30,14 @@ jobs:
       - name: Set GameType from workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
         run: echo "GameType=${{ github.event.inputs.GameType }}" >> $GITHUB_ENV
+
+      - name: Set GameType for schedule D2E
+        if: github.event_name == 'schedule' && github.event.schedule == '0 * * * *'
+        run: echo "GameType=D2E" >> $GITHUB_ENV
+
+      - name: Set GameType for schedule MoM
+        if: github.event_name == 'schedule' && github.event.schedule == '30 * * * *'
+        run: echo "GameType=MoM" >> $GITHUB_ENV
 
       - name: Fetch manifest.ini
         id: fetch_manifest
