@@ -20,22 +20,56 @@ def get_manifest_path(game_type):
         return "MoM/manifestDownload.ini"
 
 def fetch_scenario_ini(url, retries=3, delay=2):
-    logging.info(f"Fetching scenario.ini from: {url}")
+    """
+    Fetch the first .ini file found in the given external repository URL.
+    Tries to list files in the repo and fetch the first .ini file found.
+    """
+    logging.info(f"Fetching scenario .ini from: {url}")
     if url.endswith('/'):
         url = url[:-1]
-    ini_url = url + "/scenario.ini"
-    for attempt in range(1, retries + 1):
-        try:
-            resp = requests.get(ini_url, timeout=20)
-            if resp.status_code == 200:
-                logging.info(f"Successfully fetched scenario.ini from: {ini_url}")
-                return resp.text
-            else:
-                logging.warning(f"Failed to fetch scenario.ini from: {ini_url} (status {resp.status_code}), attempt {attempt}/{retries}")
-        except Exception as e:
-            logging.error(f"Exception while fetching scenario.ini from {ini_url} (attempt {attempt}/{retries}): {e}")
-        if attempt < retries:
-            time.sleep(delay)
+
+    # Try to detect GitHub raw URLs and convert to API URL for listing files
+    ini_content = None
+    parsed = urlparse(url)
+    if "raw.githubusercontent.com" in parsed.netloc:
+        # Convert raw.githubusercontent.com/USER/REPO/BRANCH/PATH to API URL
+        parts = parsed.path.strip('/').split('/')
+        if len(parts) >= 4:
+            user, repo, branch = parts[:3]
+            repo_path = '/'.join(parts[3:])
+            api_url = f"https://api.github.com/repos/{user}/{repo}/contents/{repo_path}?ref={branch}"
+            headers = {}
+            token = os.environ.get("GITHUB_TOKEN")
+            if token:
+                headers["Authorization"] = f"token {token}"
+            for attempt in range(1, retries + 1):
+                try:
+                    resp = requests.get(api_url, headers=headers, timeout=20)
+                    if resp.status_code == 200:
+                        files = resp.json()
+                        ini_file = None
+                        for file in files:
+                            if file["name"].lower().endswith(".ini"):
+                                ini_file = file["download_url"]
+                                break
+                        if ini_file:
+                            logging.info(f"Found ini file: {ini_file}")
+                            ini_resp = requests.get(ini_file, timeout=20)
+                            if ini_resp.status_code == 200:
+                                logging.info(f"Successfully fetched ini file from: {ini_file}")
+                                return ini_resp.text
+                            else:
+                                logging.warning(f"Failed to fetch ini file from: {ini_file} (status {ini_resp.status_code}), attempt {attempt}/{retries}")
+                        else:
+                            logging.warning(f"No .ini file found in repo listing at {api_url}")
+                            return None
+                    else:
+                        logging.warning(f"Failed to list files from {api_url} (status {resp.status_code}), attempt {attempt}/{retries}")
+                except Exception as e:
+                    logging.error(f"Exception while listing/fetching ini file from {api_url} (attempt {attempt}/{retries}): {e}")
+                if attempt < retries:
+                    time.sleep(delay)
+            return None
     return None
 
 def get_latest_commit_date(url, retries=3, delay=2):
@@ -94,6 +128,44 @@ def write_manifest_download_ini(scenarios, out_path):
             f.write("\n")
     logging.info(f"Finished writing manifestDownload.ini with {len(scenarios)} scenarios.")
 
+def process_scenario_section(section, config):
+    if "external" not in config[section]:
+        logging.warning(f"Section [{section}] missing 'external' entry, skipping.")
+        return None
+    external_url = config[section]["external"]
+    scenario_ini_content = fetch_scenario_ini(external_url)
+    if not scenario_ini_content:
+        logging.warning(f"Could not fetch scenario.ini for [{section}], skipping.")
+        return None
+
+    # Parse scenario.ini
+    scenario_config = configparser.ConfigParser()
+    scenario_config.optionxform = str
+    scenario_config.read_string(scenario_ini_content)
+
+    # Rename [Quest] to [ScenarioName]
+    scenario_data = {}
+    if "Quest" in scenario_config:
+        for k, v in scenario_config["Quest"].items():
+            scenario_data[k] = v
+    else:
+        # fallback: use first section if not [Quest]
+        first_section = scenario_config.sections()[0]
+        for k, v in scenario_config[first_section].items():
+            scenario_data[k] = v
+
+    # Add url and latest_update
+    scenario_data["url"] = external_url
+    scenario_data["latest_update"] = get_latest_commit_date(external_url)
+
+    logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
+    logging.info(f"Final scenario_data for [{section}]: {scenario_data}")
+
+    return {
+        "name": section,
+        "data": scenario_data
+    }
+
 def main():
     logging.info("Starting manifest_sync.py script")
     if len(sys.argv) < 2:
@@ -107,41 +179,9 @@ def main():
     scenarios = []
 
     for section in config.sections():
-        if "external" not in config[section]:
-            logging.warning(f"Section [{section}] missing 'external' entry, skipping.")
-            continue
-        external_url = config[section]["external"]
-        scenario_ini_content = fetch_scenario_ini(external_url)
-        if not scenario_ini_content:
-            logging.warning(f"Could not fetch scenario.ini for [{section}], skipping.")
-            continue
-
-        # Parse scenario.ini
-        scenario_config = configparser.ConfigParser()
-        scenario_config.optionxform = str
-        scenario_config.read_string(scenario_ini_content)
-
-        # Rename [Quest] to [ScenarioName]
-        scenario_data = {}
-        if "Quest" in scenario_config:
-            for k, v in scenario_config["Quest"].items():
-                scenario_data[k] = v
-        else:
-            # fallback: use first section if not [Quest]
-            first_section = scenario_config.sections()[0]
-            for k, v in scenario_config[first_section].items():
-                scenario_data[k] = v
-
-        # Add url and latest_update
-        scenario_data["url"] = external_url
-        scenario_data["latest_update"] = get_latest_commit_date(external_url)
-
-        scenarios.append({
-            "name": section,
-            "data": scenario_data
-        })
-
-        logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
+        scenario = process_scenario_section(section, config)
+        if scenario:
+            scenarios.append(scenario)
 
     write_manifest_download_ini(scenarios, output_path)
     logging.info("manifest_sync.py script finished successfully.")
