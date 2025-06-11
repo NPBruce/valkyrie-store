@@ -1,0 +1,103 @@
+name: Manifest Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      GameType:
+        description: 'Game mode to update manifest for'
+        required: true
+        default: 'MoM'
+        type: choice
+        options:
+          - D2E
+          - MoM
+  schedule:
+    # Run D2E at every hour
+    - cron: '0 * * * *'
+    # Run MoM at every hour + 30 minutes
+    - cron: '30 * * * *'
+
+jobs:
+  sync-manifest:
+    name: Sync Manifest (${{ github.event.inputs.GameType || (github.event.schedule == '0 * * * *' && 'D2E') || (github.event.schedule == '30 * * * *' && 'MoM') }})
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set GameType from workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "GameType=${{ github.event.inputs.GameType }}" >> $GITHUB_ENV
+
+      - name: Set GameType for schedule D2E
+        if: github.event_name == 'schedule' && github.event.schedule == '0 * * * *'
+        run: echo "GameType=D2E" >> $GITHUB_ENV
+
+      - name: Set GameType for schedule MoM
+        if: github.event_name == 'schedule' && github.event.schedule == '30 * * * *'
+        run: echo "GameType=MoM" >> $GITHUB_ENV
+
+      - name: Check for recent commit (skip if <2min)
+        if: github.event_name == 'schedule'
+        id: recent_commit_check
+        run: |
+          latest_commit_time=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits?per_page=1" | \
+            jq -r '.[0].commit.committer.date')
+          latest_commit_epoch=$(date --date="$latest_commit_time" +%s)
+          now_epoch=$(date +%s)
+          diff=$((now_epoch - latest_commit_epoch))
+          echo "Latest commit was $diff seconds ago"
+          if [ $diff -lt 300 ]; then
+            echo "Repository was updated less than 5 minutes ago. Skipping job."
+            exit 78
+          fi
+
+      - name: Skip if recent commit
+        if: steps.recent_commit_check.outcome == 'failure'
+        run: |
+          echo "::warning::Job skipped due to recent commit."
+          exit 0
+
+      - name: Fetch manifest.ini
+        id: fetch_manifest
+        run: |
+          if [[ "$GameType" == "D2E" ]]; then
+            curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/NPBruce/valkyrie-store/contents/D2E/manifest.ini \
+              | jq -r .content | base64 -d > manifest.ini
+          else
+            curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              https://api.github.com/repos/NPBruce/valkyrie-store/contents/MoM/manifest.ini \
+              | jq -r .content | base64 -d > manifest.ini
+          fi
+
+      - name: Parse manifest and fetch scenario data
+        id: parse_and_fetch
+        run: |
+          pip install requests configparser
+          python .github/scripts/manifest_sync.py "$GameType"
+
+      - name: Show git status before commit
+        run: |
+          git status
+          git diff D2E/manifestDownload.ini || true
+          git diff MoM/manifestDownload.ini || true
+
+      - name: Commit and push manifestDownload.ini for D2E
+        if: env.GameType == 'D2E'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
+          file_pattern: |
+            D2E/manifestDownload.ini
+
+      - name: Commit and push manifestDownload.ini for MoM
+        if: env.GameType == 'MoM'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
+          file_pattern: |
+            MoM/manifestDownload.ini
