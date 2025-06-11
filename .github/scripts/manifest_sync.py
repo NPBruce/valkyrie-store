@@ -178,9 +178,12 @@ def get_latest_commit_date(url, retries=3, delay=2):
 
 def parse_manifest_ini(manifest_path):
     logging.info(f"Parsing manifest.ini from: {manifest_path}")
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest_content = f.read()
+    logging.debug(f"Manifest file content:\n{manifest_content}")
     config = configparser.ConfigParser()
     config.optionxform = str  # preserve case
-    config.read(manifest_path, encoding="utf-8")
+    config.read_string(manifest_content)
     return config
 
 def write_manifest_download_ini(scenarios, out_path, is_content_pack=False):
