@@ -19,6 +19,13 @@ def get_manifest_path(game_type):
     else:
         return "MoM/manifestDownload.ini"
 
+def get_contentpackmanifest_path(game_type):
+    logging.info(f"Getting content pack manifest path for GameType: {game_type}")
+    if game_type == "D2E":
+        return "D2E/contentPacksManifestDownload.ini"
+    else:
+        return "MoM/contentPacksManifestDownload.ini"
+
 def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
     """
     Fetch the first .ini file found in the given external repository URL.
@@ -293,8 +300,8 @@ def main():
     process_manifest(manifest_path, output_path)
 
     # --- Repeat for ContentPacks ---
-    cp_manifest_path = os.path.join("ContentPacks", "contentPacksManifest.ini")
-    cp_output_path = os.path.join("ContentPacks", "contentPacksManifestDownload.ini")
+    cp_manifest_path = "manifestDownload.ini"
+    cp_output_path = get_contentpackmanifest_path(game_type)
     process_contentpacks_manifest(cp_manifest_path, cp_output_path)
 
 if __name__ == "__main__":
