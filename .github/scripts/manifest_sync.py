@@ -183,17 +183,26 @@ def parse_manifest_ini(manifest_path):
     config.read(manifest_path, encoding="utf-8")
     return config
 
-def write_manifest_download_ini(scenarios, out_path):
+def write_manifest_download_ini(scenarios, out_path, is_content_pack=False):
     logging.info(f"Writing manifestDownload.ini to: {out_path}")
-    with open(out_path, "w", encoding="utf-8") as f:
-        # Write header line with scenario count
-        f.write(f"# Generated with {len(scenarios)} scenarios\n")
-        for scenario in scenarios:
-            f.write(f'[{scenario["name"]}]\n')
-            for k, v in scenario["data"].items():
-                f.write(f"{k}={v}\n")
-            f.write("\n")
-    logging.info(f"Finished writing manifestDownload.ini with {len(scenarios)} scenarios.")
+    try:
+        with open(out_path, "w", encoding="utf-8") as f:
+            # Write header line with scenario or content pack count
+            if is_content_pack:
+                f.write(f"# Generated with {len(scenarios)} content packs\n")
+            else:
+                f.write(f"# Generated with {len(scenarios)} scenarios\n")
+            for scenario in scenarios:
+                f.write(f'[{scenario["name"]}]\n')
+                for k, v in scenario["data"].items():
+                    f.write(f"{k}={v}\n")
+                f.write("\n")
+        if is_content_pack:
+            logging.info(f"Finished writing manifestDownload.ini with {len(scenarios)} content packs.")
+        else:
+            logging.info(f"Finished writing manifestDownload.ini with {len(scenarios)} scenarios.")
+    except Exception as e:
+        logging.error(f"Failed to write manifestDownload.ini to {out_path}: {e}", exc_info=True)
 
 def process_scenario_section(section, config):
     if "external" not in config[section]:
@@ -265,7 +274,7 @@ def process_manifest(manifest_path, output_path):
         except Exception as e:
             logging.error(f"Exception while processing section [{section}]: {e}", exc_info=True)
 
-    write_manifest_download_ini(scenarios, output_path)
+    write_manifest_download_ini(scenarios, output_path, is_content_pack=False)
     logging.info(f"Finished processing manifest: {manifest_path}")
 
 def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
@@ -278,12 +287,12 @@ def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
     for section in cp_config.sections():
         try:
             contentPack = process_scenario_section(section, cp_config)
-            if cp_packs:
+            if contentPack:
                 cp_packs.append(contentPack)
         except Exception as e:
             logging.error(f"Exception while processing ContentPacks section [{section}]: {e}", exc_info=True)
 
-    write_manifest_download_ini(cp_packs, cp_output_path)
+    write_manifest_download_ini(cp_packs, cp_output_path, is_content_pack=True)
     logging.info("ContentPacks manifest_sync finished successfully.")
 
 def main():
