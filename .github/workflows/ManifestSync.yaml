@@ -98,5 +98,5 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update manifestDownload.ini and contentPacksManifestDownload.ini for ${{ env.GameType }}"
-          file_pattern: '*.ini'
+          file_pattern: D2E/manifestDownload.ini MoM/manifestDownload.ini D2E/contentPacksManifestDownload.ini MoM/contentPacksManifestDownload.ini
           disable_globbing: true
