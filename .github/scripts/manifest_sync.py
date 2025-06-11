@@ -60,7 +60,7 @@ def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
                             return None
                         ini_file = None
                         for file in files:
-                            if file["name"].lower().endswith(".ini"):
+                            if scenario_name and file["name"].lower() == f"{scenario_name.lower()}.ini":
                                 ini_file = file["download_url"]
                                 break
                         if ini_file:
