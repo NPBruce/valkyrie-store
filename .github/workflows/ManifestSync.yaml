@@ -100,8 +100,7 @@ jobs:
         with:
           commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
           file_pattern: |
-            D2E/manifestDownload.ini
-            D2E/contentPacksManifestDownload.ini
+            '*.ini'
 
       - name: Commit and push manifestDownload.ini for MoM
         if: env.GameType == 'MoM'
@@ -109,5 +108,4 @@ jobs:
         with:
           commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
           file_pattern: |
-            MoM/manifestDownload.ini
-            MoM/contentPacksManifestDownload.ini
+            '*.ini'
