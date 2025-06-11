@@ -70,14 +70,14 @@ jobs:
               | jq -r .content | base64 -d > manifest.ini
             curl -s -H "Authorization: token $GITHUB_TOKEN" \
               https://api.github.com/repos/NPBruce/valkyrie-store/contents/D2E/contentPacksManifest.ini \
-              | jq -r .content | base64 -d > ContentPacks/contentPacksManifest.ini
+              | jq -r .content | base64 -d > contentPacksManifest.ini
           else
             curl -s -H "Authorization: token $GITHUB_TOKEN" \
               https://api.github.com/repos/NPBruce/valkyrie-store/contents/MoM/manifest.ini \
               | jq -r .content | base64 -d > manifest.ini
             curl -s -H "Authorization: token $GITHUB_TOKEN" \
               https://api.github.com/repos/NPBruce/valkyrie-store/contents/MoM/contentPacksManifest.ini \
-              | jq -r .content | base64 -d > ContentPacks/contentPacksManifest.ini
+              | jq -r .content | base64 -d > contentPacksManifest.ini
           fi
 
       - name: Parse manifest and fetch scenario data
