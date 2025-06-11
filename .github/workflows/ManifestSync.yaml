@@ -91,8 +91,8 @@ jobs:
           git status
           git diff D2E/manifestDownload.ini || true
           git diff MoM/manifestDownload.ini || true
-          git diff D2E/contentpacksDownload.ini || true
-          git diff MoM/contentpacksDownload.ini || true
+          git diff D2E/contentPacksManifestDownload.ini || true
+          git diff MoM/contentPacksManifestDownload.ini || true
 
       - name: Commit and push manifestDownload.ini for D2E
         if: env.GameType == 'D2E'
@@ -101,7 +101,7 @@ jobs:
           commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
           file_pattern: |
             D2E/manifestDownload.ini
-            D2E/contentpacksDownload.ini
+            D2E/contentPacksManifestDownload.ini
 
       - name: Commit and push manifestDownload.ini for MoM
         if: env.GameType == 'MoM'
@@ -110,4 +110,4 @@ jobs:
           commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
           file_pattern: |
             MoM/manifestDownload.ini
-            MoM/contentpacksDownload.ini
+            MoM/contentPacksManifestDownload.ini
