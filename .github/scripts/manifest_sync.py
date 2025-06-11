@@ -243,18 +243,12 @@ def process_scenario_section(section, config):
         "data": scenario_data
     }
 
-def main():
-    logging.info("Starting manifest_sync.py script")
-    if len(sys.argv) < 2:
-        logging.error("Usage: manifest_sync.py <GameType>")
-        sys.exit(1)
-    game_type = sys.argv[1]
-    manifest_path = "manifest.ini"
-    output_path = get_manifest_path(game_type)
+def process_manifest(manifest_path, output_path):
     logging.info("Manifest path to update: " + output_path)
-
     config = parse_manifest_ini(manifest_path)
     scenarios = []
+
+    logging.info(f"Found {len(config.sections())} scenarios in manifest.")
 
     for section in config.sections():
         try:
@@ -265,7 +259,43 @@ def main():
             logging.error(f"Exception while processing section [{section}]: {e}", exc_info=True)
 
     write_manifest_download_ini(scenarios, output_path)
-    logging.info("manifest_sync.py script finished successfully.")
+    logging.info(f"Finished processing manifest: {manifest_path}")
+
+def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
+    if os.path.exists(cp_manifest_path):
+        logging.info(f"Processing ContentPacks manifest: {cp_manifest_path}")
+        cp_config = parse_manifest_ini(cp_manifest_path)
+        cp_scenarios = []
+
+        logging.info(f"Found {len(cp_config.sections())} content packs in ContentPacks manifest.")
+
+        for section in cp_config.sections():
+            try:
+                scenario = process_scenario_section(section, cp_config)
+                if scenario:
+                    cp_scenarios.append(scenario)
+            except Exception as e:
+                logging.error(f"Exception while processing ContentPacks section [{section}]: {e}", exc_info=True)
+        write_manifest_download_ini(cp_scenarios, cp_output_path)
+        logging.info("ContentPacks manifest_sync finished successfully.")
+    else:
+        logging.warning(f"ContentPacks manifest not found: {cp_manifest_path}")
+
+def main():
+    logging.info("Starting manifest_sync.py script")
+    if len(sys.argv) < 2:
+        logging.error("Usage: manifest_sync.py <GameType>")
+        sys.exit(1)
+    game_type = sys.argv[1]
+
+    manifest_path = "manifest.ini"
+    output_path = get_manifest_path(game_type)
+    process_manifest(manifest_path, output_path)
+
+    # --- Repeat for ContentPacks ---
+    cp_manifest_path = os.path.join("ContentPacks", "contentPacksManifest.ini")
+    cp_output_path = os.path.join("ContentPacks", "contentPacksManifestDownload.ini")
+    process_contentpacks_manifest(cp_manifest_path, cp_output_path)
 
 if __name__ == "__main__":
     main()
