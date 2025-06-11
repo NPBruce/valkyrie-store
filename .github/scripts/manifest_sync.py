@@ -300,7 +300,7 @@ def main():
     process_manifest(manifest_path, output_path)
 
     # --- Repeat for ContentPacks ---
-    cp_manifest_path = "manifestDownload.ini"
+    cp_manifest_path = "contentPacksManifest.ini"
     cp_output_path = get_contentpackmanifest_path(game_type)
     process_contentpacks_manifest(cp_manifest_path, cp_output_path)
 
