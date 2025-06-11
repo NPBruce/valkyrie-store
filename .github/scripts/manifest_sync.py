@@ -261,7 +261,7 @@ def process_scenario_section(section, config, file_extension=".valkyrie"):
     }
 
 def process_manifest(manifest_path, output_path):
-    logging.info(f"--------------------------------- {cp_manifest_path}")
+    logging.info(f"---------------------------------")
     logging.info("Manifest path to update: " + output_path)
     config = parse_manifest_ini(manifest_path)
     scenarios = []
@@ -280,7 +280,7 @@ def process_manifest(manifest_path, output_path):
     logging.info(f"Finished processing manifest: {manifest_path}")
 
 def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
-    logging.info(f"--------------------------------- {cp_manifest_path}")
+    logging.info(f"---------------------------------")
     logging.info(f"Processing ContentPacks manifest: {cp_manifest_path}")
     cp_config = parse_manifest_ini(cp_manifest_path)
     cp_packs = []
