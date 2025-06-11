@@ -104,15 +104,14 @@ def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
             logging.warning(f"No scenario_name provided for non-GitHub URL: {url}")
     return None
 
-def get_latest_commit_date(url, retries=3, delay=2):
-    logging.info(f"Fetching latest commit date for: {url}")
+def get_latest_commit_date(url, retries=3, delay=2, file_extension=".valkyrie"):
+    logging.info(f"Fetching latest commit date for: {url} (extension: {file_extension})")
     parsed = urlparse(url)
     if "raw.githubusercontent.com" in parsed.netloc:
         parts = parsed.path.strip('/').split('/')
         if len(parts) >= 3:
             user, repo, branch = parts[:3]
             repo_path = '/'.join(parts[3:]) if len(parts) > 3 else ''
-            # List files in the repo path to find the .valkyrie file
             if repo_path:
                 api_url = f"https://api.github.com/repos/{user}/{repo}/contents/{repo_path}?ref={branch}"
             else:
@@ -121,7 +120,7 @@ def get_latest_commit_date(url, retries=3, delay=2):
             token = os.environ.get("GITHUB_TOKEN")
             if token:
                 headers["Authorization"] = f"token {token}"
-            valkyrie_file_path = None
+            target_file_path = None
             for attempt in range(1, retries + 1):
                 try:
                     resp = requests.get(api_url, headers=headers, timeout=20)
@@ -131,13 +130,13 @@ def get_latest_commit_date(url, retries=3, delay=2):
                             logging.warning(f"API response is not a list at {api_url}: {files}")
                             return "1970-01-01T12:28:29Z"
                         for file in files:
-                            if file["name"].lower().endswith(".valkyrie"):
-                                valkyrie_file_path = file["path"]
+                            if file["name"].lower().endswith(file_extension.lower()):
+                                target_file_path = file["path"]
                                 break
-                        if valkyrie_file_path:
+                        if target_file_path:
                             break
                         else:
-                            logging.warning(f"No .valkyrie file found in repo listing at {api_url}")
+                            logging.warning(f"No {file_extension} file found in repo listing at {api_url}")
                             return "1970-01-01T12:28:29Z"
                     else:
                         logging.warning(f"Failed to list files from {api_url} (status {resp.status_code}), attempt {attempt}/{retries}")
@@ -145,11 +144,10 @@ def get_latest_commit_date(url, retries=3, delay=2):
                     logging.error(f"Exception while listing files from {api_url} (attempt {attempt}/{retries}): {e}")
                 if attempt < retries:
                     time.sleep(delay)
-            if not valkyrie_file_path:
-                logging.warning(f"No .valkyrie file found after all attempts in {api_url}")
+            if not target_file_path:
+                logging.warning(f"No {file_extension} file found after all attempts in {api_url}")
                 return "1970-01-01T12:28:29Z"
-            # Now get the latest commit for the .valkyrie file
-            repo_api = f"https://api.github.com/repos/{user}/{repo}/commits?sha={branch}&path={valkyrie_file_path}"
+            repo_api = f"https://api.github.com/repos/{user}/{repo}/commits?sha={branch}&path={target_file_path}"
             for attempt in range(1, retries + 1):
                 try:
                     resp = requests.get(repo_api, headers=headers, timeout=20)
@@ -157,17 +155,17 @@ def get_latest_commit_date(url, retries=3, delay=2):
                         data = resp.json()
                         if isinstance(data, list) and data:
                             date = data[0]["commit"]["committer"]["date"]
-                            logging.info(f"Latest commit date for {valkyrie_file_path} in {url}: {date}")
+                            logging.info(f"Latest commit date for {target_file_path} in {url}: {date}")
                             return date
                         else:
-                            logging.warning(f"No commits found for {valkyrie_file_path} in {url}, attempt {attempt}/{retries}")
+                            logging.warning(f"No commits found for {target_file_path} in {url}, attempt {attempt}/{retries}")
                     else:
                         logging.warning(f"Failed to fetch commits from {repo_api} (status {resp.status_code}), attempt {attempt}/{retries}")
                 except Exception as e:
                     logging.error(f"Exception while fetching commits from {repo_api} (attempt {attempt}/{retries}): {e}")
                 if attempt < retries:
                     time.sleep(delay)
-            logging.error(f"All attempts failed to fetch commit date for {valkyrie_file_path} in {repo_api}")
+            logging.error(f"All attempts failed to fetch commit date for {target_file_path} in {repo_api}")
             return "1970-01-01T12:28:29Z"
         else:
             logging.warning(f"Could not parse repo info from url: {url}")
@@ -207,7 +205,7 @@ def write_manifest_download_ini(scenarios, out_path, is_content_pack=False):
     except Exception as e:
         logging.error(f"Failed to write manifestDownload.ini to {out_path}: {e}", exc_info=True)
 
-def process_scenario_section(section, config):
+def process_scenario_section(section, config, file_extension=".valkyrie"):
     if "external" not in config[section]:
         logging.warning(f"Section [{section}] missing 'external' entry, skipping.")
         return None
@@ -253,7 +251,7 @@ def process_scenario_section(section, config):
 
     # Add url and latest_update
     scenario_data["url"] = external_url
-    scenario_data["latest_update"] = get_latest_commit_date(external_url)
+    scenario_data["latest_update"] = get_latest_commit_date(external_url, file_extension=file_extension)
 
     logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
 
@@ -271,7 +269,7 @@ def process_manifest(manifest_path, output_path):
 
     for section in config.sections():
         try:
-            scenario = process_scenario_section(section, config)
+            scenario = process_scenario_section(section, config)  # uses default .valkyrie
             if scenario:
                 scenarios.append(scenario)
         except Exception as e:
@@ -289,7 +287,7 @@ def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
 
     for section in cp_config.sections():
         try:
-            contentPack = process_scenario_section(section, cp_config)
+            contentPack = process_scenario_section(section, cp_config, file_extension=".valkyrieContentPack")
             if contentPack:
                 cp_packs.append(contentPack)
         except Exception as e:
