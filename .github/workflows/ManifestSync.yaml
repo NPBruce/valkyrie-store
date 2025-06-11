@@ -51,17 +51,20 @@ jobs:
           diff=$((now_epoch - latest_commit_epoch))
           echo "Latest commit was $diff seconds ago"
           if [ $diff -lt 300 ]; then
+            echo "SKIP_JOB=true" >> $GITHUB_ENV
             echo "Repository was updated less than 5 minutes ago. Skipping job."
-            exit 78
+          else
+            echo "SKIP_JOB=false" >> $GITHUB_ENV
           fi
 
       - name: Skip if recent commit
-        if: steps.recent_commit_check.outcome == 'failure'
+        if: env.SKIP_JOB == 'true'
         run: |
           echo "::warning::Job skipped due to recent commit."
           exit 0
 
       - name: Fetch manifest.ini and contentPacksManifest.ini
+        if: env.SKIP_JOB != 'true'
         id: fetch_manifest
         run: |
           if [[ "$GameType" == "D2E" ]]; then
@@ -81,12 +84,14 @@ jobs:
           fi
 
       - name: Parse manifest and fetch scenario data
+        if: env.SKIP_JOB != 'true'
         id: parse_and_fetch
         run: |
           pip install requests configparser
           python .github/scripts/manifest_sync.py "$GameType"
 
       - name: Show git status before commit
+        if: env.SKIP_JOB != 'true'
         run: |
           git status
           git diff D2E/manifestDownload.ini || true
@@ -95,6 +100,7 @@ jobs:
           git diff MoM/contentPacksManifestDownload.ini || true
 
       - name: Commit and push change ini files
+        if: env.SKIP_JOB != 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update manifestDownload.ini and contentPacksManifestDownload.ini for ${{ env.GameType }}"
