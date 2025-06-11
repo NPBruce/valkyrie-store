@@ -94,18 +94,9 @@ jobs:
           git diff D2E/contentPacksManifestDownload.ini || true
           git diff MoM/contentPacksManifestDownload.ini || true
 
-      - name: Commit and push manifestDownload.ini for D2E
-        if: env.GameType == 'D2E'
+      - name: Commit and push change ini files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
-          file_pattern: |
-            '*.ini'
-
-      - name: Commit and push manifestDownload.ini for MoM
-        if: env.GameType == 'MoM'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update manifestDownload.ini for ${{ env.GameType }}"
-          file_pattern: |
-            '*.ini'
+          commit_message: "Update manifestDownload.ini and contentPacksManifestDownload.ini for ${{ env.GameType }}"
+          file_pattern: '*.ini'
+          disable_globbing: true
