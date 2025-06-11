@@ -61,7 +61,7 @@ jobs:
           echo "::warning::Job skipped due to recent commit."
           exit 0
 
-      - name: Fetch manifest.ini and contentpacks.ini
+      - name: Fetch manifest.ini and contentPacksManifest.ini
         id: fetch_manifest
         run: |
           if [[ "$GameType" == "D2E" ]]; then
@@ -69,15 +69,15 @@ jobs:
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/D2E/manifest.ini" \
               | jq -r .content | base64 -d > manifest.ini
             curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/D2E/contentpacks.ini" \
-              | jq -r .content | base64 -d > contentpacks.ini
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/D2E/contentPacksManifest.ini" \
+              | jq -r .content | base64 -d > contentPacksManifest.ini
           else
             curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/MoM/manifest.ini" \
               | jq -r .content | base64 -d > manifest.ini
             curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/MoM/contentpacks.ini" \
-              | jq -r .content | base64 -d > contentpacks.ini
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/MoM/contentPacksManifest.ini" \
+              | jq -r .content | base64 -d > contentPacksManifest.ini
           fi
 
       - name: Parse manifest and fetch scenario data
