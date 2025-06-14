@@ -1,5 +1,7 @@
 name: Manifest Sync
-
+description: |
+  This workflow synchronizes the manifest files for D2E and MoM game modes. The combined manifest data can later be downloaded by the Valkyrie application to fetch scenario data.
+  The Workflow runs every hour for D2E and every hour + 30 minutes for MoM. It can also be triggered manually to update the manifest for a specific game mode.
 on:
   workflow_dispatch:
     inputs:
