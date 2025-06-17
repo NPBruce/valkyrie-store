@@ -42,13 +42,11 @@ jobs:
         run: echo "GameType=MoM" >> $GITHUB_ENV
 
       - name: Check for recent commit (skip if <2min)
-        if: github.event_name == 'schedule'
         id: recent_commit_check
         run: |
           latest_commit_time=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits?per_page=1" | \
-            jq -r '.[0].commit.committer.date')
-          latest_commit_epoch=$(date --date="$latest_commit_time" +%s)
+              jq -r 'if type=="array" then .[0].commit.committer.date else .commit.committer.date end')
           now_epoch=$(date +%s)
           diff=$((now_epoch - latest_commit_epoch))
           echo "Latest commit was $diff seconds ago"
