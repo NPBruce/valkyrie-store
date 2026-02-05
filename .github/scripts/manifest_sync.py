@@ -104,9 +104,41 @@ def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
             logging.warning(f"No scenario_name provided for non-GitHub URL: {url}")
     return None
 
-def get_latest_commit_date(url, retries=3, delay=2, file_extension=".valkyrie"):
-    logging.info(f"Fetching latest commit date for: {url} (extension: {file_extension})")
+def fetch_stats():
+    """
+    Fetch the scenario statistics JSON from Google Drive.
+    Returns a dictionary mapping scenario_name (filename) to its stats dictionary.
+    """
+    url = "https://drive.google.com/uc?id=1lEhwFWrryzNH6DUMbte37G1p22SyDhu9&export=download"
+    logging.info(f"Fetching stats from: {url}")
+    try:
+        resp = requests.get(url, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            stats_map = {}
+            if "scenarios_stats" in data:
+                for item in data["scenarios_stats"]:
+                    # filename is the key
+                    if "scenario_name" in item:
+                        stats_map[item["scenario_name"]] = item
+            logging.info(f"Successfully fetched stats for {len(stats_map)} scenarios.")
+            return stats_map
+        else:
+            logging.warning(f"Failed to fetch stats (status {resp.status_code})")
+            return {}
+    except Exception as e:
+        logging.error(f"Exception while fetching stats: {e}")
+        return {}
+
+def get_repo_file_info(url, retries=3, delay=2, file_extension=".valkyrie"):
+    """
+    Fetches the latest commit date and the actual filename for the main scenario file.
+    Returns a dictionary with 'date' and 'filename'.
+    """
+    logging.info(f"Fetching repo file info for: {url} (extension: {file_extension})")
     parsed = urlparse(url)
+    default_result = {"date": "1970-01-01T12:28:29Z", "filename": None}
+
     if "raw.githubusercontent.com" in parsed.netloc:
         parts = parsed.path.strip('/').split('/')
         if len(parts) >= 3:
@@ -120,7 +152,10 @@ def get_latest_commit_date(url, retries=3, delay=2, file_extension=".valkyrie"):
             token = os.environ.get("GITHUB_TOKEN")
             if token:
                 headers["Authorization"] = f"token {token}"
+            
             target_file_path = None
+            target_filename = None
+
             for attempt in range(1, retries + 1):
                 try:
                     resp = requests.get(api_url, headers=headers, timeout=20)
@@ -128,25 +163,29 @@ def get_latest_commit_date(url, retries=3, delay=2, file_extension=".valkyrie"):
                         files = resp.json()
                         if not isinstance(files, list):
                             logging.warning(f"API response is not a list at {api_url}: {files}")
-                            return "1970-01-01T12:28:29Z"
+                            return default_result
                         for file in files:
                             if file["name"].lower().endswith(file_extension.lower()):
                                 target_file_path = file["path"]
+                                target_filename = file["name"]
                                 break
                         if target_file_path:
                             break
                         else:
                             logging.warning(f"No {file_extension} file found in repo listing at {api_url}")
-                            return "1970-01-01T12:28:29Z"
+                            return default_result
                     else:
                         logging.warning(f"Failed to list files from {api_url} (status {resp.status_code}), attempt {attempt}/{retries}")
                 except Exception as e:
                     logging.error(f"Exception while listing files from {api_url} (attempt {attempt}/{retries}): {e}")
                 if attempt < retries:
                     time.sleep(delay)
+            
             if not target_file_path:
                 logging.warning(f"No {file_extension} file found after all attempts in {api_url}")
-                return "1970-01-01T12:28:29Z"
+                return default_result
+            
+            # Now get the commit date
             repo_api = f"https://api.github.com/repos/{user}/{repo}/commits?sha={branch}&path={target_file_path}"
             for attempt in range(1, retries + 1):
                 try:
@@ -155,8 +194,8 @@ def get_latest_commit_date(url, retries=3, delay=2, file_extension=".valkyrie"):
                         data = resp.json()
                         if isinstance(data, list) and data:
                             date = data[0]["commit"]["committer"]["date"]
-                            logging.info(f"Latest commit date for {target_file_path} in {url}: {date}")
-                            return date
+                            logging.info(f"Latest commit date for {target_file_path}: {date}")
+                            return {"date": date, "filename": target_filename}
                         else:
                             logging.warning(f"No commits found for {target_file_path} in {url}, attempt {attempt}/{retries}")
                     else:
@@ -165,14 +204,15 @@ def get_latest_commit_date(url, retries=3, delay=2, file_extension=".valkyrie"):
                     logging.error(f"Exception while fetching commits from {repo_api} (attempt {attempt}/{retries}): {e}")
                 if attempt < retries:
                     time.sleep(delay)
-            logging.error(f"All attempts failed to fetch commit date for {target_file_path} in {repo_api}")
-            return "1970-01-01T12:28:29Z"
+            
+            logging.error(f"All attempts failed to fetch commit date for {target_file_path}")
+            return default_result
         else:
             logging.warning(f"Could not parse repo info from url: {url}")
-            return "1970-01-01T12:28:29Z"
+            return default_result
     else:
-        logging.info(f"Non-GitHub URL, returning date placeholder instead of getting commit date fetch: {url}")
-        return "1970-01-01T12:28:29Z"
+        logging.info(f"Non-GitHub URL, returning defaults: {url}")
+        return default_result
 
 def parse_manifest_ini(manifest_path):
     logging.info(f"Parsing manifest.ini from: {manifest_path}")
@@ -205,7 +245,7 @@ def write_manifest_download_ini(scenarios, out_path, is_content_pack=False):
     except Exception as e:
         logging.error(f"Failed to write manifestDownload.ini to {out_path}: {e}", exc_info=True)
 
-def process_scenario_section(section, config, file_extension=".valkyrie"):
+def process_scenario_section(section, config, stats_map=None, file_extension=".valkyrie"):
     if "external" not in config[section]:
         logging.warning(f"Section [{section}] missing 'external' entry, skipping.")
         return None
@@ -249,9 +289,27 @@ def process_scenario_section(section, config, file_extension=".valkyrie"):
         for k, v in scenario_config[first_section].items():
             scenario_data[k] = v
 
+    # Get repo info (date and filename)
+    repo_info = get_repo_file_info(external_url, file_extension=file_extension)
+    
     # Add url and latest_update
     scenario_data["url"] = external_url
-    scenario_data["latest_update"] = get_latest_commit_date(external_url, file_extension=file_extension)
+    scenario_data["latest_update"] = repo_info["date"]
+    
+    # Inject stats if available and filename matches
+    if stats_map and repo_info["filename"]:
+        filename = repo_info["filename"]
+        if filename in stats_map:
+            stats = stats_map[filename]
+            if "scenario_avg_rating" in stats:
+                scenario_data["rating"] = str(stats["scenario_avg_rating"])
+            if "scenario_play_count" in stats:
+                scenario_data["play_count"] = str(stats["scenario_play_count"])
+            if "scenario_avg_duration" in stats:
+                scenario_data["duration"] = str(stats["scenario_avg_duration"])
+            if "scenario_avg_win_ratio" in stats:
+                scenario_data["win_ratio"] = str(stats["scenario_avg_win_ratio"])
+            logging.info(f"Injected stats for {filename}")
 
     logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
 
@@ -263,6 +321,10 @@ def process_scenario_section(section, config, file_extension=".valkyrie"):
 def process_manifest(manifest_path, output_path):
     logging.info(f"---------------------------------")
     logging.info("Manifest path to update: " + output_path)
+    
+    # Fetch stats once
+    stats_map = fetch_stats()
+    
     config = parse_manifest_ini(manifest_path)
     scenarios = []
 
@@ -270,7 +332,7 @@ def process_manifest(manifest_path, output_path):
 
     for section in config.sections():
         try:
-            scenario = process_scenario_section(section, config)  # uses default .valkyrie
+            scenario = process_scenario_section(section, config, stats_map=stats_map)  # uses default .valkyrie
             if scenario:
                 scenarios.append(scenario)
         except Exception as e:
@@ -282,6 +344,10 @@ def process_manifest(manifest_path, output_path):
 def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
     logging.info(f"---------------------------------")
     logging.info(f"Processing ContentPacks manifest: {cp_manifest_path}")
+    
+    # Fetch stats once (or reuse if we wanted to pass it in, but fetching again is safer/easier for now as it's cheap)
+    stats_map = fetch_stats()
+
     cp_config = parse_manifest_ini(cp_manifest_path)
     cp_packs = []
 
@@ -289,7 +355,7 @@ def process_contentpacks_manifest(cp_manifest_path, cp_output_path):
 
     for section in cp_config.sections():
         try:
-            contentPack = process_scenario_section(section, cp_config, file_extension=".valkyrieContentPack")
+            contentPack = process_scenario_section(section, cp_config, stats_map=stats_map, file_extension=".valkyrieContentPack")
             if contentPack:
                 cp_packs.append(contentPack)
         except Exception as e:
