@@ -296,10 +296,15 @@ def process_scenario_section(section, config, stats_map=None, file_extension=".v
     scenario_data["url"] = external_url
     scenario_data["latest_update"] = repo_info["date"]
     
-    # Inject stats if available and filename matches
-    if stats_map and repo_info["filename"]:
-        filename = repo_info["filename"]
-        filename_lower = filename.lower()
+    # Inject stats if available
+    # If we found a specific filename from the repo (GitHub), use it.
+    # Otherwise, fallback to assuming the filename matches the section name (e.g. GitLab or others).
+    target_filename = repo_info["filename"]
+    if not target_filename:
+        target_filename = f"{section}{file_extension}"
+
+    if stats_map and target_filename:
+        filename_lower = target_filename.lower()
         if filename_lower in stats_map:
             stats = stats_map[filename_lower]
             if "scenario_avg_rating" in stats:
@@ -310,7 +315,7 @@ def process_scenario_section(section, config, stats_map=None, file_extension=".v
                 scenario_data["duration"] = str(stats["scenario_avg_duration"])
             if "scenario_avg_win_ratio" in stats:
                 scenario_data["win_ratio"] = str(stats["scenario_avg_win_ratio"])
-            logging.info(f"Injected stats for {filename}")
+            logging.info(f"Injected stats for {target_filename}")
 
     logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
 
