@@ -297,25 +297,35 @@ def process_scenario_section(section, config, stats_map=None, file_extension=".v
     scenario_data["latest_update"] = repo_info["date"]
     
     # Inject stats if available
-    # If we found a specific filename from the repo (GitHub), use it.
-    # Otherwise, fallback to assuming the filename matches the section name (e.g. GitLab or others).
-    target_filename = repo_info["filename"]
-    if not target_filename:
-        target_filename = f"{section}{file_extension}"
+    # Try multiple candidates for matching stats:
+    # 1. The actual filename found in the repo (if any).
+    # 2. The section name + extension (fallback and common pattern).
+    candidates = []
+    if repo_info["filename"]:
+        candidates.append(repo_info["filename"])
+    candidates.append(f"{section}{file_extension}")
 
-    if stats_map and target_filename:
-        filename_lower = target_filename.lower()
-        if filename_lower in stats_map:
-            stats = stats_map[filename_lower]
-            if "scenario_avg_rating" in stats:
-                scenario_data["rating"] = str(stats["scenario_avg_rating"])
-            if "scenario_play_count" in stats:
-                scenario_data["play_count"] = str(stats["scenario_play_count"])
-            if "scenario_avg_duration" in stats:
-                scenario_data["duration"] = str(stats["scenario_avg_duration"])
-            if "scenario_avg_win_ratio" in stats:
-                scenario_data["win_ratio"] = str(stats["scenario_avg_win_ratio"])
-            logging.info(f"Injected stats for {target_filename}")
+    found_stats = None
+    matched_name = None
+
+    if stats_map:
+        for candidate in candidates:
+            candidate_lower = candidate.lower()
+            if candidate_lower in stats_map:
+                found_stats = stats_map[candidate_lower]
+                matched_name = candidate
+                break
+
+    if found_stats:
+        if "scenario_avg_rating" in found_stats:
+            scenario_data["rating"] = str(found_stats["scenario_avg_rating"])
+        if "scenario_play_count" in found_stats:
+            scenario_data["play_count"] = str(found_stats["scenario_play_count"])
+        if "scenario_avg_duration" in found_stats:
+            scenario_data["duration"] = str(found_stats["scenario_avg_duration"])
+        if "scenario_avg_win_ratio" in found_stats:
+            scenario_data["win_ratio"] = str(found_stats["scenario_avg_win_ratio"])
+        logging.info(f"Injected stats using match: {matched_name}")
 
     logging.info(f"Parsed scenario: [{section}] with url: {external_url}")
 
