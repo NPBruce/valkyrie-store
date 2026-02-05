@@ -107,7 +107,7 @@ def fetch_scenario_ini(url, scenario_name=None, retries=3, delay=2):
 def fetch_stats():
     """
     Fetch the scenario statistics JSON from Google Drive.
-    Returns a dictionary mapping scenario_name (filename) to its stats dictionary.
+    Returns a dictionary mapping scenario_name (filename, lowercase) to its stats dictionary.
     """
     url = "https://drive.google.com/uc?id=1lEhwFWrryzNH6DUMbte37G1p22SyDhu9&export=download"
     logging.info(f"Fetching stats from: {url}")
@@ -118,9 +118,9 @@ def fetch_stats():
             stats_map = {}
             if "scenarios_stats" in data:
                 for item in data["scenarios_stats"]:
-                    # filename is the key
+                    # filename is the key - normalize to lowercase
                     if "scenario_name" in item:
-                        stats_map[item["scenario_name"]] = item
+                        stats_map[item["scenario_name"].lower()] = item
             logging.info(f"Successfully fetched stats for {len(stats_map)} scenarios.")
             return stats_map
         else:
@@ -299,8 +299,9 @@ def process_scenario_section(section, config, stats_map=None, file_extension=".v
     # Inject stats if available and filename matches
     if stats_map and repo_info["filename"]:
         filename = repo_info["filename"]
-        if filename in stats_map:
-            stats = stats_map[filename]
+        filename_lower = filename.lower()
+        if filename_lower in stats_map:
+            stats = stats_map[filename_lower]
             if "scenario_avg_rating" in stats:
                 scenario_data["rating"] = str(stats["scenario_avg_rating"])
             if "scenario_play_count" in stats:
